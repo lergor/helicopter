@@ -10,16 +10,14 @@ namespace simulation {
     }
 
     struct vec {
-        double x;
-        double y;
+        double x{};
+        double y{};
 
         vec() = default;
 
-        vec(double x, double y, double angle = 0): x(x), y(y) {}
+        vec(double x, double y): x(x), y(y) {}
 
-        vec(const point &p) {
-            vec(p.x, p.y);
-        }
+        vec(const point &p): x(p.x), y(p.y) {}
 
         double angle() const {
             return std::acos(x / length()) * sgn(y);
@@ -45,6 +43,10 @@ namespace simulation {
             x += other.x;
             y += other.y;
             return *this;
+        }
+
+        vec operator-(vec const &other) const {
+            return {x - other.x, y - other.y};
         }
 
         double operator*(vec const &other) const {

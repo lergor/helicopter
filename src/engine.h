@@ -5,6 +5,8 @@
 #include "helicopter.h"
 #include "../include/matplotlibcpp.h"
 
+#define DEBUG
+
 namespace plt = matplotlibcpp;
 const std::string PLOT_DIR = "../plots/";
 
@@ -48,11 +50,14 @@ namespace simulation {
             std::vector<double> screw_rotations;
 
             double time = 0;
-
-            while (helicopter.position_.y > 0) {
+            int g = 0;
+            bool with_forces = false;
+            while (helicopter.position_.y > 1) {
                 w_cursor.move(helicopter.position_);
                 helicopter.update_state(w_cursor.get_wind(), dT);
-
+#ifdef DEBUG
+                helicopter.plot_helicopter(w_cursor.get_wind(), with_forces);
+#endif
                 positions.push_back(helicopter.position_);
                 angles.push_back(helicopter.angle());
                 speeds.push_back(helicopter.velocity_);
@@ -61,14 +66,16 @@ namespace simulation {
 
                 times.push_back(time);
                 time += dT;
+                g+= 1;
             }
 
             plot_dependencies(times, positions, speeds, pitches, screw_rotations);
-            plot_path(helicopter.length_, angles, positions);
+            plot_path(helicopter.screw_diameter_ / 2, angles, positions);
             plt::show();
-//            std::cout << time << '\n';
-//            std::cout <<"position" << helicopter.position_ << '\n';
-//            std::cout << "velocity" << helicopter.velocity_ << '\n';
+
+            std::cout << "TOTAL TIME: " << time << " s;" << std::endl;
+            std::cout <<"POSITION: " << helicopter.position_ << std::endl;
+            std::cout << "VELOCITY: " << helicopter.velocity_ << std::endl;
             return check_landing(goal, helicopter, 0.5, 0.5);
         }
 
