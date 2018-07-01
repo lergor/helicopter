@@ -58,6 +58,12 @@ namespace simulation {
             y = -y;
             return *this;
         }
+
+        vec &operator=(vec const &other) {
+            x = other.x;
+            y = other.y;
+            return *this;
+        }
     };
 
     std::ostream &operator<<(std::ostream &o, vec const &v) {

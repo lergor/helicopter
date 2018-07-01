@@ -2,7 +2,7 @@
 
 #include "wind_cursor.h"
 #include "vec.h"
-#include "helicopter.h"
+#include "Helicopter.h"
 #include "../include/matplotlibcpp.h"
 
 #define DEBUG
@@ -14,7 +14,8 @@ namespace simulation {
 
     template <typename T>
     std::pair<std::vector<double>, std::vector<double>> split_dots(std::vector<T> const &dots) {
-        std::vector<double> xs(dots.size()), ys(dots.size());
+        std::vector<double> xs(dots.size());
+        std::vector<double> ys(dots.size());
 
         std::transform(dots.begin(), dots.end(), xs.begin(), [](T const& p) { return p.x; });
         std::transform(dots.begin(), dots.end(), ys.begin(), [](T const& p) { return p.y; });
@@ -22,8 +23,7 @@ namespace simulation {
         return {xs, ys};
     };
 
-    template <typename T, typename U>
-    void plot_dependency(std::vector<T> const &xs, std::vector<U> const &ys,
+    void plot_dependency(std::vector<double> const &xs, std::vector<double> const &ys,
                          std::string const &x_label, std::string const &y_label) {
         plt::figure();
         plt::plot(xs, ys);
@@ -39,7 +39,7 @@ namespace simulation {
 
     public:
 
-        bool run(helicopter &helicopter, point const &goal) {
+        bool run(Helicopter &helicopter, point const &goal) {
             wind_cursor w_cursor = wind_cursor();
 
             std::vector<double> times;
@@ -51,8 +51,10 @@ namespace simulation {
 
             double time = 0;
             int iter = 0;
-            bool with_forces = true;
-            while (helicopter.position_.y > 1 && iter < 500 / dT) {
+            bool with_forces = false;
+            int max_iterations = static_cast<int>(200 / dT);
+
+            while (helicopter.position_.y > 1 && iter < max_iterations) {
                 w_cursor.move(helicopter.position_);
                 helicopter.update_state(w_cursor.get_wind(), dT);
 #ifdef DEBUG
@@ -62,11 +64,11 @@ namespace simulation {
                 angles.push_back(helicopter.angle());
                 speeds.push_back(helicopter.velocity_);
                 pitches.push_back(helicopter.pitch_);
-                screw_rotations.push_back(helicopter.screw_rotation_);
+                screw_rotations.push_back(helicopter.angular_velocity_);
 
                 times.push_back(time);
                 time += dT;
-                iter+= 1;
+                iter += 1;
             }
 
             plot_dependencies(times, positions, speeds, pitches, screw_rotations);
@@ -82,7 +84,7 @@ namespace simulation {
     private:
         double const dT = 0.5;
 
-        bool check_landing(point const &goal, helicopter const& helicopter,
+        bool check_landing(point const &goal, Helicopter const& helicopter,
                            double velocity_limit, double position_limit) {
             double eps = std::abs(goal.x - helicopter.position_.x);
             return helicopter.velocity_.length() < velocity_limit

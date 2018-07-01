@@ -11,32 +11,31 @@ namespace plt = matplotlibcpp;
 #define PI 3.14159265
 //#define DEBUG
 
-//http://www.physicedu.ru/phy-1592.html
-const double AIR_RESISTANCE_COEFFICIENT_FRONT = 0.04; //
+const double AIR_RESISTANCE_COEFFICIENT_FRONT = 0.04;
 
 namespace simulation {
 
     double const G = 9.8; // gravity acceleration, m/s^2
     const double rho = 1.2754; // air density, kg/m^3
 
-    struct helicopter {
+    struct Helicopter {
         const double mass_;
         const double cabin_square_;
         const double screw_diameter_; // m
         const double screw_square_; // m^2
         const double C_R_;
-//        const double screw_angle = 0.0785; // rad
 
         point position_;
-        double pitch_;
+        point goal_;
 
-        double screw_rotation_;
+        bool moving_left_;
+        double pitch_;
+        double angular_velocity_;
         vec velocity_;
         vec acceleration_;
-        point goal_;
-        bool moving_left;
+        double  fill_factor_;
 
-        helicopter(double mass, double cabin_square, double screw_diameter,
+        Helicopter(double mass, double cabin_square, double screw_diameter, double fill_factor,
                    double C_R, point const &pos, double pitch, double screw_rotation,
                    double velocity = 0, vec const &acceleration = {}, point const &goal = {})
                 : mass_(mass),
@@ -45,15 +44,16 @@ namespace simulation {
                   screw_square_(PI * screw_diameter_ * screw_diameter_ / 4),
                   C_R_(C_R),
                   position_(pos),
+                  goal_(goal),
+                  moving_left_(goal_.x < position_.x),
                   pitch_(pitch),
-                  screw_rotation_(screw_rotation),
+                  angular_velocity_(screw_rotation),
                   velocity_({velocity * std::cos(angle()), velocity * std::sin(angle())}),
                   acceleration_(acceleration),
-                  goal_(goal),
-                  moving_left((goal_.x - position_.x) < 0) {}
+                  fill_factor_(fill_factor) {}
 
         double angle() {
-            return (moving_left) ? (PI - pitch_) : pitch_;
+            return (moving_left_) ? (PI - pitch_) : pitch_;
         }
 
         void update_position(double dT) {
@@ -68,27 +68,44 @@ namespace simulation {
         }
 
         void update_pitch(double dT) {
-            pitch_ = (moving_left) ? (PI - velocity_.angle()) : velocity_.angle();
+            pitch_ = moving_left_ ? (PI - velocity_.angle()) : velocity_.angle();
             if (pitch_ > PI / 2) {
                 pitch_ -= 2 * PI;
             }
         }
 
-        void update_screw_rotation(double dT) {
+        void update_screw_rotation(double dT, const vec &wind) {
+            double blade_mass = 50; // kg
+            double n = 5; // number of blades
+            double c = 0.52; // cord length, m
+            double tw = 0.0785; // rad
+            double a = 0.5; // lift slope
 
+            double W = angular_velocity_ * screw_diameter_ / 2;
+
+            double phi = std::atan((wind.y + velocity_.y) / W);
+
+            double theta_0 = std::abs(velocity_ * wind) / (velocity_.length() * wind.length());
+            double theta_r = theta_0 / 3 - tw / 4 - phi / 2;
+            double C_i = phi * c * n * a * theta_r / PI;
+            double Q_i = C_i * rho * fill_factor_ * screw_square_ * W * W / 2;
+            double force_moment = Q_i * screw_diameter_ / 2;
+            double moment_of_inertia = 5 * blade_mass * std::pow(screw_diameter_, 2) / 12;
+            double angular_acceleration = force_moment / moment_of_inertia;
+            angular_velocity_ += angular_acceleration * dT;
         }
 
         vec aerodynamic_force(vec const &wind) {
-            vec  total_flow = wind - velocity_;
+            vec total_flow = wind - velocity_;
             double force = C_R_ * screw_square_ * rho * std::pow(total_flow.y, 2) / 2;
             double angle = wind.angle() + PI / 2;
             return {force * std::cos(angle), force * std::sin(angle)};
         }
 
         vec air_resistance(vec const &wind) {
-            vec  total_flow = wind - velocity_;
+            vec total_flow = wind - velocity_;
             double force = AIR_RESISTANCE_COEFFICIENT_FRONT * cabin_square_ * rho * std::pow(total_flow.x, 2) / 2;
-            return {force, 0};
+            return {force * std::cos(total_flow.angle()), force * std::sin(total_flow.angle())};
         }
 
         std::pair<std::vector<vec>, std::vector<std::string>> collect_forces(vec const &wind) {
@@ -105,11 +122,12 @@ namespace simulation {
 
 #ifdef DEBUG
             std::cout << "velocity: " << velocity_ << '\n';
+            std::cout << "position: " << position_ << '\n';
             std::cout << "wind: " << wind << '\n';
             vec total;
             for (int i = 0; i < forces_and_names.first.size(); ++i) {
                 total += forces_and_names.first[i];
-                std::cout << forces_and_names.second[i] << forces_and_names.first[i] << '\n';
+                std::cout << forces_and_names.second[i] + ": " << forces_and_names.first[i] << '\n';
             }
             std::cout << "total: " << total << '\n';
 #endif
@@ -122,7 +140,7 @@ namespace simulation {
             update_speed(dT);
             update_position(dT);
             update_pitch(dT);
-            update_screw_rotation(dT);
+            update_screw_rotation(dT, wind);
 #ifdef DEBUG
             std::cout << "pitch: " << pitch_ * 180 / PI << "\n----\n";
 #endif
