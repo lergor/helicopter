@@ -13,9 +13,6 @@ namespace plt = matplotlibcpp;
 
 //http://www.physicedu.ru/phy-1592.html
 const double AIR_RESISTANCE_COEFFICIENT_FRONT = 0.04; //
-const double AIR_RESISTANCE_COEFFICIENT_BOTTOM = 0.47; //
-const double SCREW_AIR_RESISTANCE_COEFFICIENT_FRONT = 0.82; //
-const double SCREW_AIR_RESISTANCE_COEFFICIENT_BOTTOM = 1; //
 
 namespace simulation {
 
@@ -24,6 +21,7 @@ namespace simulation {
 
     struct helicopter {
         const double mass_;
+        const double cabin_square_;
         const double screw_diameter_; // m
         const double screw_square_; // m^2
         const double C_R_;
@@ -38,10 +36,11 @@ namespace simulation {
         point goal_;
         bool moving_left;
 
-        helicopter(double mass, double screw_diameter, double C_R, point const &pos,
-                   double pitch, double screw_rotation, double velocity = 0,
-                   vec const &acceleration = {}, point const &goal = {})
+        helicopter(double mass, double cabin_square, double screw_diameter,
+                   double C_R, point const &pos, double pitch, double screw_rotation,
+                   double velocity = 0, vec const &acceleration = {}, point const &goal = {})
                 : mass_(mass),
+                  cabin_square_(cabin_square),
                   screw_diameter_(screw_diameter),
                   screw_square_(PI * screw_diameter_ * screw_diameter_ / 4),
                   C_R_(C_R),
@@ -51,10 +50,10 @@ namespace simulation {
                   velocity_({velocity * std::cos(angle()), velocity * std::sin(angle())}),
                   acceleration_(acceleration),
                   goal_(goal),
-                  moving_left() {}
+                  moving_left((goal_.x - position_.x) < 0) {}
 
         double angle() {
-            return (((goal_.x - position_.x) < 0)) ? (PI - pitch_) : pitch_;
+            return (moving_left) ? (PI - pitch_) : pitch_;
         }
 
         void update_position(double dT) {
@@ -69,7 +68,10 @@ namespace simulation {
         }
 
         void update_pitch(double dT) {
-            pitch_ = (((goal_.x - position_.x) < 0)) ? (PI - velocity_.angle()) : velocity_.angle();
+            pitch_ = (moving_left) ? (PI - velocity_.angle()) : velocity_.angle();
+            if (pitch_ > PI / 2) {
+                pitch_ -= 2 * PI;
+            }
         }
 
         void update_screw_rotation(double dT) {
@@ -77,11 +79,16 @@ namespace simulation {
         }
 
         vec aerodynamic_force(vec const &wind) {
-            double  W = screw_rotation_ * screw_diameter_ / 2 + wind.y;
             vec  total_flow = wind - velocity_;
             double force = C_R_ * screw_square_ * rho * std::pow(total_flow.y, 2) / 2;
             double angle = wind.angle() + PI / 2;
             return {force * std::cos(angle), force * std::sin(angle)};
+        }
+
+        vec air_resistance(vec const &wind) {
+            vec  total_flow = wind - velocity_;
+            double force = AIR_RESISTANCE_COEFFICIENT_FRONT * cabin_square_ * rho * std::pow(total_flow.x, 2) / 2;
+            return {force, 0};
         }
 
         std::pair<std::vector<vec>, std::vector<std::string>> collect_forces(vec const &wind) {
@@ -90,18 +97,21 @@ namespace simulation {
             forces_and_names.first.push_back({0, -G * mass_});
             forces_and_names.second.push_back("gravity_force");
 
+            forces_and_names.first.push_back(air_resistance(wind));
+            forces_and_names.second.push_back("air_resistance");
+
             forces_and_names.first.push_back(aerodynamic_force(wind));
             forces_and_names.second.push_back("aerodynamic_force");
 
 #ifdef DEBUG
-            std::cout << '\t' << "velocity: " << velocity_ << '\n';
-            std::cout << '\t' << "wind: " << wind << '\n';
+            std::cout << "velocity: " << velocity_ << '\n';
+            std::cout << "wind: " << wind << '\n';
             vec total;
             for (int i = 0; i < forces_and_names.first.size(); ++i) {
                 total += forces_and_names.first[i];
-                std::cout << '\t' << forces_and_names.second[i] << forces_and_names.first[i] << '\n';
+                std::cout << forces_and_names.second[i] << forces_and_names.first[i] << '\n';
             }
-            std::cout << '\t' << "total: " << total << '\n';
+            std::cout << "total: " << total << '\n';
 #endif
             return forces_and_names;
         }
@@ -114,7 +124,7 @@ namespace simulation {
             update_pitch(dT);
             update_screw_rotation(dT);
 #ifdef DEBUG
-            std::cout << pitch_ * 180 / PI << "\n----\n";
+            std::cout << "pitch: " << pitch_ * 180 / PI << "\n----\n";
 #endif
         }
 

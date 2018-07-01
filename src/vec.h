@@ -52,6 +52,12 @@ namespace simulation {
         double operator*(vec const &other) const {
             return x * other.x + y * other.y;
         }
+
+        vec &operator-() {
+            x = -x;
+            y = -y;
+            return *this;
+        }
     };
 
     std::ostream &operator<<(std::ostream &o, vec const &v) {

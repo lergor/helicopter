@@ -50,9 +50,9 @@ namespace simulation {
             std::vector<double> screw_rotations;
 
             double time = 0;
-            int g = 0;
-            bool with_forces = false;
-            while (helicopter.position_.y > 1) {
+            int iter = 0;
+            bool with_forces = true;
+            while (helicopter.position_.y > 1 && iter < 500 / dT) {
                 w_cursor.move(helicopter.position_);
                 helicopter.update_state(w_cursor.get_wind(), dT);
 #ifdef DEBUG
@@ -66,7 +66,7 @@ namespace simulation {
 
                 times.push_back(time);
                 time += dT;
-                g+= 1;
+                iter+= 1;
             }
 
             plot_dependencies(times, positions, speeds, pitches, screw_rotations);
