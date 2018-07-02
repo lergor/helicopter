@@ -31,6 +31,6 @@
 *.out
 *.app
 
-plots/
+bin/helicopter
 .idea/
 cmake-build-debug/
