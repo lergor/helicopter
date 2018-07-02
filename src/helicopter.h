@@ -72,8 +72,8 @@ namespace simulation {
         bool moving_left_;
         vec acceleration_;
 
-        Helicopter(const Propeller &prop, const helicopter_params &params,
-                   point const &pos, double pitch, vec velocity)
+        Helicopter(Propeller const &prop, const helicopter_params &params,
+                   point const &pos, double pitch, vec const &velocity)
                 : propeller_(prop),
                   params_(params),
                   position_(pos),
