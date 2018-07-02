@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ostream>
+#include <memory>
 
 struct point {
     double x;
@@ -12,15 +13,9 @@ std::ostream &operator<<(std::ostream &o, point const &p) {
 }
 
 struct wind_cursor {
-//    virtual void move(point const& p) = 0;
-//    virtual point get_wind() const = 0;
-//    virtual ~wind_cursor(){}
-
-    void move(point const& p) {}
-
-    point get_wind() const {
-        return {20, 10};
-    }
-
-    ~wind_cursor() = default;
+    virtual void move(point const& p) = 0;
+    virtual point get_wind() const = 0;
+    virtual ~wind_cursor(){}
 };
+
+std::shared_ptr<wind_cursor> get_wind_cursor();

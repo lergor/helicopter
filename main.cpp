@@ -1,30 +1,43 @@
 #include <iostream>
-#include "src/engine.h"
+#include "src/simulator.h"
 
 using namespace std;
 using namespace simulation;
 
-// http://aviadocs.com/RLE/Mi-8/CD1/TO/Mi-8_TO_kn1.pdf
+
 const double MASS = 11100; // kg
 const double HEIGHT = 2.34; // m
 const double WIDTH = 1.8; // m
-const double SCREW_DIAMETER = 21.29; // m
+const double FRONT_AIR_RESISTANCE_COEFFICIENT = 0.04;
+
+const double PROPELLER_DIAMETER = 21.29; // m
+double BLADE_MASS = 50; // kg
+double NUM_OF_BLADES = 5;
+const double FILL_FACTOR = 0.0777; // coefficient for traction force
+double CORD_LENGTH = 0.52; // m
+double tw = 0.0785; // fixed angle, rad
+double LIFT_SLOPE = 0.5;
+const double PROPELLER_ROTATION = 2 * M_PI * 192 / 60; // rad/s
+const double C_x = 0.15; // coefficient for propeller air resistance
+const double C_y = 0.55; // coefficient for traction force
 
 const point POSITION = {1000, 1000};
-const double PITCH = -PI / 18 / 2; // rad
-const double SCREW_ROTATION = 2 * PI * 192 / 60; // rad/s
-const double VELOCITY = 72; // m/s
+const double PITCH = -M_PI / 18 / 2; // rad
+const vec VELOCITY = {-72, -6}; // m/s
 const point TARGET_POSITION = {0, 0};
-const double C_x = 0.15; // coefficient for screw air resistance
-const double C_y = 0.55; // coefficient for traction force
-const double FILL_FACTOR = 0.0777; // coefficient for traction force
+const double dT = 0.5;
+const double X_limit = 40;
+const double V_limit = 20;
 
 
 int main() {
-    Helicopter helicopter(MASS, WIDTH * HEIGHT, SCREW_DIAMETER, FILL_FACTOR,
-                          std::sqrt(C_x * C_x + C_y * C_y), POSITION, PITCH,
-                          SCREW_ROTATION, VELOCITY, TARGET_POSITION);
-    Engine engine;
-    engine.run(helicopter, TARGET_POSITION);
+    propeller_params p_params = {PROPELLER_DIAMETER, C_x, C_y, BLADE_MASS, NUM_OF_BLADES,
+                                         FILL_FACTOR, CORD_LENGTH, tw, LIFT_SLOPE};
+    helicopter_params h_params = {MASS, HEIGHT, WIDTH, FRONT_AIR_RESISTANCE_COEFFICIENT};
+    helicopter helicopter({p_params, PROPELLER_ROTATION}, h_params,
+                          POSITION, PITCH, VELOCITY);
+    Simulator engine = Simulator(TARGET_POSITION, X_limit, V_limit);
+    bool landing = engine.run(helicopter, dT);
+    std::cout << (landing ? "SUCCESS" : "FAIL") << std::endl;
     return 0;
 }

@@ -10,8 +10,8 @@ namespace simulation {
     }
 
     struct vec {
-        double x{};
-        double y{};
+        double x {0};
+        double y {0};
 
         vec() = default;
 
@@ -49,7 +49,7 @@ namespace simulation {
             return {x - other.x, y - other.y};
         }
 
-        double operator*(vec const &other) const {
+        double dot(vec const &other) const {
             return x * other.x + y * other.y;
         }
 
@@ -59,11 +59,7 @@ namespace simulation {
             return *this;
         }
 
-        vec &operator=(vec const &other) {
-            x = other.x;
-            y = other.y;
-            return *this;
-        }
+        vec &operator=(vec const &other) = default;
     };
 
     std::ostream &operator<<(std::ostream &o, vec const &v) {
