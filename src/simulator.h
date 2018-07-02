@@ -5,7 +5,6 @@
 #include "helicopter.h"
 #include "../include/matplotlibcpp.h"
 
-//#define DEBUG
 
 namespace plt = matplotlibcpp;
 const std::string PLOT_DIR = "./plots/";
@@ -43,7 +42,7 @@ namespace simulation {
         plot_dependency(times, pitches, "t", "p");
     }
 
-    void plot_path(helicopter const &helic, std::vector<double> const &angles,
+    void plot_path(Helicopter const &helic, std::vector<double> const &angles,
                    std::vector<point> const &positions) {
         plt::figure();
 
@@ -77,7 +76,7 @@ namespace simulation {
                   position_limit_(X_limit),
                   velocity_limit_(V_limit) {}
 
-        bool run(helicopter &helicopter, double dT, bool show_plots) {
+        bool run(Helicopter &helicopter, double dT, bool show_plots) {
             auto w_cursor = get_wind_cursor();
 
             std::vector<double> times;
@@ -92,16 +91,15 @@ namespace simulation {
             bool with_forces = false;
             int max_iterations = static_cast<int>(200 / dT);
 
-            while (helicopter.position_.y > 1 && iter < max_iterations) {
-                w_cursor->move(helicopter.position_);
+            while (helicopter.position().y > 1 && iter < max_iterations) {
+                w_cursor->move(helicopter.position());
+
                 helicopter.update_state(dT, w_cursor->get_wind());
-#ifdef DEBUG
-                helicopter.plot_helicopter(w_cursor->get_wind(), with_forces);
-#endif
-                positions.push_back(helicopter.position_);
-                speeds.push_back(helicopter.velocity_);
+
+                positions.push_back(helicopter.position());
+                speeds.push_back(helicopter.velocity());
                 angles.push_back(helicopter.angle());
-                pitches.push_back(helicopter.pitch_);
+                pitches.push_back(helicopter.pitch());
                 angular_velocities.push_back(helicopter.angular_velocity());
 
                 times.push_back(time);
@@ -116,8 +114,8 @@ namespace simulation {
             }
 
             std::cout << "TOTAL TIME: " << time << " s;" << std::endl;
-            std::cout <<"POSITION: " << helicopter.position_ << std::endl;
-            std::cout << "VELOCITY: " << helicopter.velocity_ << std::endl;
+            std::cout <<"POSITION: " << helicopter.position() << std::endl;
+            std::cout << "VELOCITY: " << helicopter.velocity() << std::endl;
 
             return check_landing(helicopter);
         }
@@ -140,13 +138,11 @@ namespace simulation {
         double velocity_limit_;
         double position_limit_;
 
-        bool check_landing(helicopter const& helicopter) {
+        bool check_landing(Helicopter const& helicopter) {
 
-            double eps = std::abs(target_position_.x - helicopter.position_.x);
-            return helicopter.velocity_.length() < velocity_limit_ && eps < position_limit_;
+            double eps = std::abs(target_position_.x - helicopter.position().x);
+            return helicopter.velocity().length() < velocity_limit_ && eps < position_limit_;
         }
     };
-
-
 
 }

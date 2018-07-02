@@ -9,7 +9,6 @@
 
 namespace plt = matplotlibcpp;
 
-//#define DEBUG
 
 namespace simulation {
 
@@ -17,6 +16,7 @@ namespace simulation {
     const double rho = 1.2754; // air density, kg/m^3
 
     struct propeller_params {
+
         const double propeller_diameter_;
         const double C_x_;
         const double C_y_;
@@ -29,6 +29,7 @@ namespace simulation {
     };
 
     struct Propeller {
+
         propeller_params params_;
         double angular_velocity_;
 
@@ -49,7 +50,8 @@ namespace simulation {
         }
     };
 
-    struct helicopter_params{
+    struct helicopter_params {
+
         const double mass_;
         const double height_;
         const double width_;
@@ -60,7 +62,7 @@ namespace simulation {
         }
     };
 
-    struct helicopter {
+    struct Helicopter {
 
         Propeller propeller_;
         helicopter_params params_;
@@ -70,7 +72,7 @@ namespace simulation {
         bool moving_left_;
         vec acceleration_;
 
-        helicopter(const Propeller &prop, const helicopter_params &params,
+        Helicopter(const Propeller &prop, const helicopter_params &params,
                    point const &pos, double pitch, vec velocity)
                 : propeller_(prop),
                   params_(params),
@@ -103,7 +105,7 @@ namespace simulation {
             }
         }
 
-        void update_screw_rotation(double dT, vec const &wind) {
+        void update_propeller_rotation(double dT, vec const &wind) {
 
             double n = propeller_.params_.num_of_blades_;
             double c = propeller_.params_.cord_length_;
@@ -145,42 +147,26 @@ namespace simulation {
                     force * std::sin(total_flow.angle())};
         }
 
-        std::pair<std::vector<vec>, std::vector<std::string>> collect_forces(vec const &wind) {
-            std::pair<std::vector<vec>, std::vector<std::string>> forces_and_names;
+        std::vector<vec> collect_forces(vec const &wind) {
+            std::vector<vec> forces;
 
-            forces_and_names.first.push_back({0, -G * params_.mass_});
-            forces_and_names.second.push_back("gravity_force");
+            //gravity_force
+            forces.push_back({0, -G * params_.mass_});
 
-            forces_and_names.first.push_back(air_resistance(wind));
-            forces_and_names.second.push_back("air_resistance");
+            forces.push_back(air_resistance(wind));
 
-            forces_and_names.first.push_back(aerodynamic_force(wind));
-            forces_and_names.second.push_back("aerodynamic_force");
+            forces.push_back(aerodynamic_force(wind));
 
-#ifdef DEBUG
-            std::cout << "velocity: " << velocity_ << '\n';
-            std::cout << "position: " << position_ << '\n';
-            std::cout << "wind: " << wind << '\n';
-            vec total;
-            for (int i = 0; i < forces_and_names.first.size(); ++i) {
-                total += forces_and_names.first[i];
-                std::cout << forces_and_names.second[i] + ": " << forces_and_names.first[i] << '\n';
-            }
-            std::cout << "total: " << total << '\n';
-#endif
-            return forces_and_names;
+            return forces;
         }
 
         void update_state(double dT, point const &wind) {
-            auto forces = collect_forces(wind).first;
+            auto forces = collect_forces(wind);
             update_acceleration(forces);
             update_speed(dT);
             update_position(dT);
             update_pitch(dT);
-            update_screw_rotation(dT, wind);
-#ifdef DEBUG
-            std::cout << "pitch: " << pitch_ * 180 / M_PI << "\n----\n";
-#endif
+            update_propeller_rotation(dT, wind);
         }
 
         void update_acceleration(std::vector<vec> const &forces) {
@@ -192,7 +178,7 @@ namespace simulation {
             acceleration_.y = total_force.y / params_.mass_;
         }
 
-        point position() {
+        point position()const {
             return position_;
         }
 
@@ -200,7 +186,7 @@ namespace simulation {
             return propeller_.angular_velocity_;
         }
 
-        vec velocity() {
+        vec velocity()const {
             return velocity_;
         }
 
@@ -211,44 +197,5 @@ namespace simulation {
         double propeller_radius()const {
             return propeller_.radius();
         }
-
-        void plot_force(vec const &force, std::string const &name) {
-            std::vector<double> xs = {position_.x, position_.x + force.x};
-            std::vector<double> ys = {position_.y, position_.y + force.y};
-            plt::named_plot(name, xs, ys);
-        }
-
-        void plot_helicopter(vec const &wind, bool with_forces) {
-
-            if (with_forces) {
-                auto vv = collect_forces(wind);
-                for (size_t i = 0; i < vv.first.size(); ++i) {
-                    plot_force(vv.first[i], vv.second[i]);
-                }
-            }
-
-            double length_x = propeller_radius() * 2 * std::cos(angle());
-            double length_y = propeller_radius() * 2 * std::sin(angle());
-
-            std::vector<double> xs = {position_.x - length_x / 2, position_.x + length_x / 2};
-            std::vector<double> ys = {position_.y - length_y / 2, position_.y + length_y / 2};
-
-            plt::plot(xs, ys);
-            plt::grid(true);
-        }
-
     };
-
-
 }
-
-//velocity: {dx: -285.294, dy: -20.5173, angle: -175.887}
-//wind: {dx: 20, dy: 10, angle: 26.5651}
-//gravity_force: {dx: 0, dy: -108780, angle: -90}
-
-//air_resistance: {dx: 9964.2, dy: 996.026, angle: 5.70835}
-//aerodynamic_force: {dx: -53902.3, dy: 107805, angle: 116.565}
-//total: {dx: -43938.1, dy: 20.5941, angle: 179.973}
-//TOTAL TIME: 49.5 s;
-//POSITION: {x: -7954.7, y: -2.66911}
-//VELOCITY: {dx: -285.294, dy: -20.5173, angle: -175.887}

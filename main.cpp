@@ -22,8 +22,8 @@ const double C_x = 0.15; // coefficient for propeller air resistance
 const double C_y = 0.55; // coefficient for traction force
 
 const point POSITION = {1000, 1000};
-const double PITCH = M_PI / 10; // rad
-const vec VELOCITY = {-72, -6}; // m/s
+const double PITCH = -M_PI / 10; // rad
+const vec VELOCITY = {90, -6}; // m/s
 const point TARGET_POSITION = {0, 0};
 const double dT = 0.5;
 const double X_limit = 40;
@@ -38,7 +38,7 @@ int main() {
 
     helicopter_params h_params = {MASS, HEIGHT, WIDTH, FRONT_AIR_RESISTANCE_COEFFICIENT};
 
-    helicopter helicopter({p_params, PROPELLER_ROTATION}, h_params,
+    Helicopter helicopter({p_params, PROPELLER_ROTATION}, h_params,
                           POSITION, PITCH, VELOCITY);
 
     Simulator engine = Simulator(TARGET_POSITION, X_limit, V_limit);
