@@ -77,7 +77,7 @@ namespace simulation {
                   position_limit_(X_limit),
                   velocity_limit_(V_limit) {}
 
-        bool run(helicopter &helicopter, double dT) {
+        bool run(helicopter &helicopter, double dT, bool show_plots) {
             auto w_cursor = get_wind_cursor();
 
             std::vector<double> times;
@@ -85,14 +85,12 @@ namespace simulation {
             std::vector<double> angular_velocities;
             std::vector<vec> speeds;
             std::vector<double> pitches;
+            std::vector<double> angles;
 
             double time = 0;
             int iter = 0;
             bool with_forces = false;
             int max_iterations = static_cast<int>(200 / dT);
-#ifdef DEBUG
-            max_iterations = 1;
-#endif
 
             while (helicopter.position_.y > 1 && iter < max_iterations) {
                 w_cursor->move(helicopter.position_);
@@ -102,6 +100,7 @@ namespace simulation {
 #endif
                 positions.push_back(helicopter.position_);
                 speeds.push_back(helicopter.velocity_);
+                angles.push_back(helicopter.angle());
                 pitches.push_back(helicopter.pitch_);
                 angular_velocities.push_back(helicopter.angular_velocity());
 
@@ -110,9 +109,11 @@ namespace simulation {
                 iter += 1;
             }
 
-            plot_dependencies(times, positions, speeds, angular_velocities, pitches);
-            plot_path(helicopter, angular_velocities, positions);
-            plt::show();
+            if (show_plots) {
+                plot_dependencies(times, positions, speeds, angular_velocities, pitches);
+                plot_path(helicopter, angles, positions);
+                plt::show();
+            }
 
             std::cout << "TOTAL TIME: " << time << " s;" << std::endl;
             std::cout <<"POSITION: " << helicopter.position_ << std::endl;

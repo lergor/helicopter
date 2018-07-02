@@ -24,7 +24,7 @@ namespace simulation {
         const double num_of_blades_;
         const double fill_factor_;
         const double cord_length_;
-        const double tw_;
+        const double phi_0_;
         const double lift_slope_;
     };
 
@@ -81,7 +81,8 @@ namespace simulation {
                   acceleration_({0, 0}) {}
 
         double angle() {
-            return (moving_left_) ? (M_PI - pitch_) : pitch_;
+            double angle = moving_left_ ? (M_PI - pitch_) : pitch_;
+            return (std::abs(angle) > 2 * M_PI) ? (angle + sgn(angle) * angle) : angle;
         }
 
         void update_position(double dT) {
@@ -97,6 +98,9 @@ namespace simulation {
 
         void update_pitch(double dT) {
             pitch_ = moving_left_ ? (M_PI - velocity_.angle()) : velocity_.angle();
+            if (pitch_ > M_PI / 2) {
+                pitch_ -= 2 * M_PI;
+            }
         }
 
         void update_screw_rotation(double dT, vec const &wind) {
@@ -104,18 +108,16 @@ namespace simulation {
             double n = propeller_.params_.num_of_blades_;
             double c = propeller_.params_.cord_length_;
             double a = propeller_.params_.lift_slope_;
-            double tw = propeller_.params_.tw_;
+            double tw = propeller_.params_.phi_0_;
             double m = propeller_.params_.blade_mass_;
             double D = propeller_.params_.propeller_diameter_;
             double R = propeller_.radius();
 
             double W = propeller_.angular_velocity_ * propeller_.radius();
 
-            double phi = std::atan((wind.y + velocity_.y) / W);
-
             double theta_0 = std::abs(velocity_.dot(wind)) / (velocity_.length() * wind.length());
-            double theta_r = theta_0 / 3 - tw / 4 - phi / 2;
-            double C_i = phi * c * n * a * theta_r / M_PI;
+            double theta_r = theta_0 / 3 - tw / 4 - pitch_ / 2;
+            double C_i = pitch_ * c * n * a * theta_r / M_PI;
             double Q_i = C_i * rho * propeller_.ff_square() * W * W / 2;
             double force_moment = Q_i * R;
             double moment_of_inertia = 5 * m * std::pow(D, 2) / 12;
